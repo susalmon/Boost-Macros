@@ -13,7 +13,10 @@ textFilePath := (folderPath "\" TextFileName ".txt")
 ListenerFileName := "MacroCommListener.ahk"
 ListenerFilePath := (folderPath "\" ListenerFileName)
 
+DefaultFilePath := A_ScriptDir "\defaults.txt"
+
 ;MsgBox(textFilePath)
+
 
 ;Error message if file does not exist, automatically creates missing components
 if not FileExist(textFilePath) {
@@ -24,10 +27,14 @@ if not FileExist(textFilePath) {
 }
 if !FileExist(ListenerFilePath){
 	MsgBox("Listener file not found at " ListenerFilePath ". Creating missing component...", "Error", "T4")
-		;MsgBox(FileRead(ListenerFileName), ListenerFilePath)
 		FileAppend(FileRead(ListenerFileName), ListenerFilePath)
-	MsgBox("Text file successfully fixed." ,"Success!", "T2")
+	MsgBox("Listener file added." ,"Success!", "T2")
 }
+
+
+FileAppend("", DefaultFilePath) ;Creates a file that contains the default delays if it does not exist
+
+
 ;gui base
 mygui := GUI(,"BSS Alt Item User")
 mygui.show("w299 h300")
@@ -40,9 +47,21 @@ btnSubmit.OnEvent("Click", SubmitClicked)
 ;Stop Button
 btnStop := mygui.Add("Button", "x103 y265 w93 h30", "Stop")
 btnStop.OnEvent("Click", StopClicked)
-;CloseALL Button
-btnClose := mygui.Add("Button", "x201 y265 w93 h30", "CloseALL")
-btnClose.OnEvent("Click", CloseClicked)
+;SetDefault Button
+btnSetDefault := mygui.Add("Button", "x201 y265 w93 h30", "Set Default")
+btnSetDefault.OnEvent("Click", SetDefaultClicked)
+
+;Converts the default.txt file into an array to be used in the GUI edit boxes.
+
+	defaultValue := []
+loop read DefaultFilePath {
+    line := Trim(A_LoopReadLine)
+
+    if (line = "")
+        defaultValue.Push("")   ; keep index alignment
+    else
+        defaultValue.Push(Number(line))
+}
 
 ;Even spacing of Text and Edit lines
 StartY := 50
@@ -52,14 +71,16 @@ num := 7
 Loop num {
 	k := StartY + (A_Index - 1) * Spacing
 	mygui.AddText("x5 y" k, A_Index)
-	mygui.AddEdit("x30 y" (k - 4) " r1 vKeybindValue" A_Index " w260") ;
+	mygui.AddEdit("x30 y" (k - 4) " r1 vKeybindValue" A_Index " w260", defaultValue[A_Index]) ;
 }
 
 
 UpdateFile() {
+	global keydelayarray, textFilePath
 	FileObj := FileOpen(textFilePath, "w" )
 	for i, v in keydelayarray
 		FileObj.WriteLine(v)
+	FileObj.Close()
 }
 ;Updates the text file when submit is pressed
 SubmitClicked(*) { 
@@ -91,15 +112,20 @@ StopClicked(*) {
 
 }
 
-;This clears the text file,
-;This makes listener close because of a lack of information,
-;This closes the input menu and exits macro
-CloseClicked(*) {
-	global mygui, keydelayarray, num, textFilePath
+;Saves the current values to default
+SetDefaultClicked(*) {
+	global mygui, keydelayarray, num, DefaultFilePath
+
+	guiData := mygui.Submit()
 
 	keydelayarray := []
 
-	UpdateFile()
-	
-	ExitApp
+	Loop num {
+		varName := "Keybindvalue" A_Index
+		value := Trim(guiData.%varName%)
+		keydelayarray.Push(value)
+	}
+	FileObj := FileOpen(DefaultFilePath, "w" )
+for i, v in keydelayarray
+	FileObj.WriteLine(v)
 }
