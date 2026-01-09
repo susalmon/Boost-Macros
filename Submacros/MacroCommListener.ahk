@@ -2,18 +2,69 @@
 #Requires AutoHotkey v2.0
 #^x::ExitApp  ;Script Termination (CtrlWinX)
 
-filePath := EnvGet("PUBLIC") "\AltItemUser\altacc1.txt"
+mygui := GUI(,"Macro Command Listener")
+
+Prefix := "AccSettings"
+folder := EnvGet("PUBLIC") "\AltItemUser"
+
+CombineTextFileArr() {
+	global mygui, folder, Prefix, textfileArr
+	textfileArr := []
+	Loop Files, folder "\" prefix "*.txt" {
+		textfileArr.Push(A_LoopFileName)
+		;MsgBox("Added file: " A_LoopFileName)
+	}
+}
+
+SummonGUIInput() {
+    global mygui, fileCombo, textfileArr
+
+    CombineTextFileArr()
+
+    if !IsSet(fileCombo) {
+        fileCombo := mygui.AddComboBox("w125", textfileArr)
+
+        mygui.AddText(
+            "y10 x145 w150",
+            "Press 'F4' to reopen this window.`n`nInfo:`nThis menu allows you to select which file THIS listener will monitor and use.`n`nNote:`nAccSettings1.txt corresponds to Main in the input and should generally not be used for alt accounts as it is more intricate. AccSettings2.txt and onwards correspond to Alt_1, Alt_2 etc"
+        )
+    } else {
+        fileCombo.Delete()       ; clear existing items
+        fileCombo.Add(textfileArr)
+    }
+
+	btnSetFile := mygui.AddButton("y190 x10 w80 h25", "Set Listener")
+	btnSetFile.OnEvent("Click", SetFileButton)
+
+    mygui.Show("w300 h225")
+}
+
+if !FileExist("launched.flag") {
+    FileAppend("0`n0`n0`n0`n0`n0`n0", "launched.flag")
+	SummonGUIInput()
+}
+
+F4::SummonGUIInput()
+
+filePath := A_ScriptDir "\launched.flag"  ;Default file path to avoid errors before selection
+
+SetFileButton(*) {
+	global fileCombo, folder, textfileArr, filePath
+	filePath := folder "\" textfileArr.Get(fileCombo.Value)
+}
+
+;------------------------------------------------------------Listener Functionality------------------------------------------------------------
 
 lastTimer := [0,0,0,0,0,0,0]
 
 global boundFuncs := []
-Loop 7 {
+Loop lastTimer.Length {
     boundFuncs.Push(Send.Bind(A_Index))
 }
 
 T0 := 0
 
-if not FileExist(filePath) {
+if !FileExist(filePath) {
     MsgBox("Exitcode 2, File not found at: " filePath)
 	ExitApp(Exitcode := 2)
 }
