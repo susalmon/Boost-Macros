@@ -2,22 +2,46 @@
 #SingleInstance
 Persistent
 global mygui
+global listenerselectgui
 
 										;Definitions
 			;Name of the text file, where the folder is located and where the child file is located.
-TextFileName := "altacc1"
 folderPath := EnvGet("PUBLIC") . "\AltItemUser"
-textFilePath := (folderPath "\" TextFileName ".txt")
 
 			;Name of the listener file path and where it is located
 ListenerFileName := "MacroCommListener.ahk"
 ListenerFilePath := (folderPath "\" ListenerFileName)
 
-DefaultFilePath := A_ScriptDir "\defaultSettings\default.txt"
+UsersFilePath := EnvGet("SystemDrive") "\Users"
 
-
-tabNames := ["Main", "Alt_1", "Alt_2", "Alt_3"]
+tabNames := ["Main", "Alt_1", "Alt_2"]
 lengthVal := tabNames.Length
+
+ListenerSelectGUI := GUI(, "Selector")
+
+usersList := []
+
+IsRealUser(name) {		;Username filter
+    return !(name ~= "i)^(default|default user|all users)$")
+}
+
+if DirExist(folderPath) != "D" {
+	global usersList
+	Loop Files, UsersFilePath "\*", "D"  ; D = directories only
+	{
+   		name := A_LoopFileName
+			if !IsRealUser(name)
+      			continue
+		usersList.Push(name)
+	}
+	counter := 0
+	;msgbox(counter)
+} else {
+	counter := 1
+	;msgbox(counter)
+}
+
+;msgbox(usersList.get(1) ", " usersList.get(2) ", " usersList.get(3) ", " usersList.get(4) ", " usersList.get(5) ", " usersList.get(6), "User List first")
 
 ;File and Folder Creation
 	;Error message if file does not exist, automatically creates missing components
@@ -30,13 +54,7 @@ Loop lengthVal {
 		MsgBox("Missing file created at `n" filePath ".", "Info", "T1")
     }
 }
-;MsgBox("Successfully checked and created missing files and/or folders.", "Info", "T1")
 
-if !FileExist(ListenerFilePath){
-	MsgBox("Listener file not found at " ListenerFilePath ". Creating missing component...", "Error", "T3.5")
-		FileAppend(FileRead(ListenerFileName), ListenerFilePath)
-	MsgBox("Listener file added." ,"Success!", "T2")
-}
 Loop lengthVal {			;Creates missing default files if they do not exist.
     filePath := A_ScriptDir "\defaultSettings" A_Index ".txt"
     if !FileExist(filePath) {
@@ -44,6 +62,7 @@ Loop lengthVal {			;Creates missing default files if they do not exist.
 		MsgBox("Missing file created at `n" filePath ".", "Info", "T1")
     }
 }
+
 ;MsgBox("Successfully checked and created missing default files.", "Info", "T1")
 
 ;Link Tabs and Text files
@@ -83,7 +102,7 @@ Spacing := 30
 num := 7
 
 TabUI(TabIndex, suffix) {			;Function to create the tab UI
-    global mygui, DefaultFilePath, tab, StartY, Spacing, num 
+    global mygui, tab, StartY, Spacing, num 
 
     tab.UseTab(TabIndex) ;Switch to the specified tab
 
@@ -121,10 +140,17 @@ btnStop.OnEvent("Click", StopClicked)
 btnSetDefault := mygui.Add("Button", "x201 y265 w93 h30", "Set Default")
 btnSetDefault.OnEvent("Click", SetDefaultClicked)
 
+;Renders GUI only when the folder exists or the Selection GUI is closed.
+listenerselectgui.OnEvent("Close", ListenerSelectGui_Close)
 
-;Renders GUI
-mygui.show("w299 h300")
+if counter = "1" {
+	mygui.show("w299 h300")
+}
 
+if counter = "0" {
+	listenerselectgui.addtext("x10 y10 w280", "When the window is closed, the file listener will be automatically copied to all desktops.`n`nOnce closed, please open your other desktops and run the MacroCommListener.ahk file.")
+	listenerselectgui.show("w300 h150")
+}
 										;FUNCTIONS
 ;fileUpdaterFunction(suffix)
 
@@ -198,4 +224,34 @@ SetDefaultClicked(*) {
 		;MsgBox(keydelayarray.Get(1) ", " keydelayarray.Get(2) ", " keydelayarray.Get(3) ", " keydelayarray.Get(4) ", " keydelayarray.Get(5) ", " keydelayarray.Get(6) ", " keydelayarray.Get(7) ".","Debug")
 		UpdateDefaults()
 	}
+}
+ListenerSelectGui_Close(gui) {
+    global usersList, folderPath, ListenerFilePath, mygui
+
+    sourcePath := A_ScriptDir "\MacroCommListener.ahk"
+    destPath := EnvGet("PUBLIC") "\Desktop\MacroCommListener.ahk"
+
+    success := false
+
+    try {
+        ; Attempt to copy the file automatically
+		Sleep 500
+        FileCopy(sourcePath, destPath, true)  ; true = overwrite if exists
+        success := true
+        MsgBox("MacroCommListener successfully copied to Public Desktop!", "Info")
+    } catch {
+        ; Automatic copy failed → fallback
+
+        MsgBox("Automatic copy to Public Desktop failed.", "Info")
+
+        ; Open the Public Desktop folder for manual drag-and-drop
+        public := EnvGet("PUBLIC")
+		FileCopy(sourcePath, public, true)
+        Run("explorer.exe " public)
+        MsgBox("Please manually copy MacroCommListener.ahk into the folder called 'Public Desktop'.`nThis can be closed once you are finished.", "Error: Manual Action Required")
+		MsgBox("After copying, please open your other desktops and run the MacroCommListener.ahk file.", "Info", "T5")
+    }
+
+    ; Continue with the main GUI
+    mygui.Show("w299 h300")
 }

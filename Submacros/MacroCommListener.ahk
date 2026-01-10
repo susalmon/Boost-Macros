@@ -2,6 +2,30 @@
 #Requires AutoHotkey v2.0
 #^x::ExitApp  ;Script Termination (CtrlWinX)
 
+; Paths
+publicDesktop := EnvGet("PUBLIC") "\Desktop"
+userDesktop   := A_Desktop  ; current user's desktop
+userInstall   := userDesktop "\MacroCommListener.ahk"
+sourcePath    := A_ScriptFullPath
+
+;Check if the script is running from Public Desktop
+if InStr(A_ScriptDir, publicDesktop) {
+    ;Copy to the current user's desktop
+    try {
+        FileCopy(sourcePath, userInstall, true)  ; overwrite if exists
+        MsgBox("Listener copied to your Desktop successfully!", "Info")
+    } catch {
+        ; Copy failed → fallback: open folder for manual drag & drop
+        MsgBox("Automatic copy failed.`nPlease manually copy MacroCommListener.ahk into your desktop.", "Manual Action Required")
+        Run("explorer.exe " userDesktop)
+        ExitApp
+    }
+
+    ;Relaunch from the new location
+    Run('"' userInstall '"')
+    ExitApp
+}
+
 mygui := GUI(,"Macro Command Listener")
 
 Prefix := "AccSettings"
@@ -10,7 +34,7 @@ folder := EnvGet("PUBLIC") "\AltItemUser"
 CombineTextFileArr() {
 	global mygui, folder, Prefix, textfileArr
 	textfileArr := []
-	Loop Files, folder "\" prefix "*.txt" {
+	Loop Files, folder "\" Prefix "*.txt" {
 		textfileArr.Push(A_LoopFileName)
 		;MsgBox("Added file: " A_LoopFileName)
 	}
@@ -42,7 +66,7 @@ SummonGUIInput() {
 flagText := []
 
 if !FileExist("launched.flag") {
-    FileAppend("0`n0`n0`n0`n0`n0`n0", "launched.flag")
+    FileAppend("0`n0`n0`n0`n0`n0`n0`nlaunched.flag", "launched.flag")
 	filePath := A_ScriptDir "\launched.flag"  ;Default file path to avoid errors before selection
 	SummonGUIInput()
 	} else {
