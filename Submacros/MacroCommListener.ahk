@@ -39,18 +39,27 @@ SummonGUIInput() {
     mygui.Show("w300 h225")
 }
 
+flagText := []
+
 if !FileExist("launched.flag") {
     FileAppend("0`n0`n0`n0`n0`n0`n0", "launched.flag")
+	filePath := A_ScriptDir "\launched.flag"  ;Default file path to avoid errors before selection
 	SummonGUIInput()
-}
+	} else {
+		loop read "launched.flag" {
+			flagText.push(A_LoopReadLine)
+		}
+		Filepath := flagText.get(8)
+	}
+
 
 F4::SummonGUIInput()
 
-filePath := A_ScriptDir "\launched.flag"  ;Default file path to avoid errors before selection
-
 SetFileButton(*) {
 	global fileCombo, folder, textfileArr, filePath
-	filePath := folder "\" textfileArr.Get(fileCombo.Value)
+	Filepath := folder "\" textfileArr.Get(fileCombo.Value)
+	addSettings := FileOpen(A_ScriptDir "\launched.flag", "w")
+	addSettings.write("0`n0`n0`n0`n0`n0`n0`n" Filepath)
 }
 
 ;------------------------------------------------------------Listener Functionality------------------------------------------------------------
@@ -85,6 +94,8 @@ ReadFilePath2() {
 	global lastTimer, timers, filePath
 	timers := []
 		loop read filePath {
+			if (A_Index > 7)
+        		break
 			timers.Push(Number(Trim(A_LoopReadLine)))
 		}
 	if timers.Length < 1 {
@@ -105,5 +116,6 @@ ReadFilePath2() {
 	}
 	lastTimer := timers
 }
+
 ;																		Debug
 ;msgbox (timers.get(1) ", " timers.get(2) ", " timers.get(3) ", " timers.get(4) ", " timers.get(5) ", " timers.get(6) ", " timers.get(7) "," timers.Length ".")
