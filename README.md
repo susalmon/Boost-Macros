@@ -1,16 +1,16 @@
 # Boost Macros
 
-A Bee Swarm Simulator macro that will help with boosting using alt accounts by allowing the user to input delays of when to press hotbar keybinds on alt accounts.
-Another macro will also include a macro that presses hotbar buttons to maintain as many buffs as possible during boosts.
+A macro that allows you to start using items on alt accounts. Instant stop when the boost is done, personalized defaults per account and millisecond-accurate delays that accurately use items on your main and alts without tab switching and reconfigureing, allowing boosting to be a simple 1 click process.
+This macro was designed to be used with other existing macros such as Revoltion macro to take advantage of its AI gather to be more efficient, while handling automatic item usage seperately.
 
-Recommended to use with gathering macros such as Revolution Macro and its AI gather or Natro Macro.
+## Interface Overview
 
-More macros may be added later.
-
+![Annotated macro interface](images/macro_overview.png)
 
 
 How to install the macro:
 
+0. Download AHK if its not installed already.
 1. Download the file and extract the zip.
 2. Open the folder named 'Submacros' and launch 'MacroCommInput.ahk'
 3. Once the macro has been started, it will start creating the necessary files for it to work.
@@ -31,6 +31,7 @@ BoostMacro2.ahk currently automatically uses glitter after 15 minutes once '6' i
 
 MacroCommListener.ahk currently is needed to be active on all local accounts that the user wants to use items on.
 The macro reads the text file in '\\Users\\Public\\AltItemUser' and interprets the information to automatically press the buttons needed.
+When setting up, MacroCommListener is copied to \\Public\\Public Desktop meaning it will appear on all local desktops, when launched from the local desktop it creates a copy to the active desktop and is used from then on.
 
 MacroCommInput.ahk currently is the program that sets up these macros and creates a GUI that allows for the user to input certain values which allows for alt accounts to use items in their hotbar at certain delays, similar to the automatic jelly beans and cloud vials of BoostMacro2.
 The macro writes the information inputted through the GUI onto a text file in the '\\Users\\Public\\AltItemUser' folder which allows all local accounts to read it. There are 3 buttons in the macro: Submit, Stop and Set Default.
@@ -40,11 +41,11 @@ The GUI now includes multiple tabs that write to their own text file. This allow
 
 
 All the delay values are in milliseconds.
-The delays should be slightly larger than what you want to account for any lag or desync between the macro and game, usually about 1 second or 1000 ms extra.
+The delays should be slightly larger than what you want to account for any lag or desync between the game and macro, usually about 1 second or 1000 milliseconds extra.
 
 Not tested on other OS other than Win 11
 
-Currently terrible and inefficient (soon to change) but good enough.
+Not associated with Revolution macro
 
 Created by susalmon,
 Official download is exclusively on GitHub.
