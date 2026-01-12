@@ -8,18 +8,19 @@ global listenerselectgui
 			;Name of the text file, where the folder is located and where the child file is located.
 folderPath := EnvGet("PUBLIC") . "\AltItemUser"
 
-			;Name of the listener file path and where it is located
-ListenerFileName := "MacroCommListener.ahk"
-ListenerFilePath := (folderPath "\" ListenerFileName)
+			;Fileformat, .exe or .ahk
+scriptName := strsplit(A_ScriptName, ".")
+fileformat := scriptName.Get(2)
 
-UsersFilePath := EnvGet("SystemDrive") "\Users"
 
-tabNames := ["Main", "Alt_1", "Alt_2"]
-lengthVal := tabNames.Length
+ListenerSelectGUI := GUI(, "Close When Read")
 
-ListenerSelectGUI := GUI(, "Selector")
+;FROM HERE TO FILE CREATOR, THIS FEATURE DOES NOT WORK DUE TO WINDOWS PERMISSIONS
+
 
 usersList := []
+
+UsersFilePath := EnvGet("SystemDrive") "\Users"
 
 IsRealUser(name) {		;Username filter
     return !(name ~= "i)^(default|default user|all users)$")
@@ -27,8 +28,7 @@ IsRealUser(name) {		;Username filter
 
 if DirExist(folderPath) != "D" {
 	global usersList
-	Loop Files, UsersFilePath "\*", "D"  ; D = directories only
-	{
+	Loop Files, UsersFilePath "\*", "D" {  ; D = directories only
    		name := A_LoopFileName
 			if !IsRealUser(name)
       			continue
@@ -40,25 +40,65 @@ if DirExist(folderPath) != "D" {
 	counter := 1
 	;msgbox(counter)
 }
-
 ;msgbox(usersList.get(1) ", " usersList.get(2) ", " usersList.get(3) ", " usersList.get(4) ", " usersList.get(5) ", " usersList.get(6), "User List first")
+
 
 ;File and Folder Creation
 	;Error message if file does not exist, automatically creates missing components
+
+;Variables for UI layout
+StartY := 50
+Spacing := 30
+num := 7
+
+AutoAppendAcc := ""
+Loop (num - 1)
+{
+    AutoAppendAcc .= "0.0`n"
+}
+AutoAppendAcc .= "0.0"
+
+;MsgBox(AutoAppendAcc)
+
+AutoAppendDef := ""
+Loop (num - 1)
+{
+    AutoAppendDef .= "0.`n"
+}
+	AutoAppendDef .= "0."
+;MsgBox(AutoAppendDef)
+
+SavedDataPath := A_ScriptDir "\SavedData"
+DirCreate(SavedDataPath)
+
+iniFilePath := A_ScriptDir "\SavedData\accounts.ini"
+if !Fileexist(iniFilePath) {
+	FileAppend("Main", iniFilePath)
+	MsgBox("Missing .ini file created at `n" iniFilePath ".", "Info", "T1")
+}
+
+tabnames := []
+loop read iniFilePath {
+	line := StrSplit(A_LoopReadLine, ",")
+	loop line.Length
+		tabnames.Push(Trim(line.Get(A_Index)))
+}
+lengthVal := tabNames.Length
+
 
 Loop lengthVal {
 	DirCreate(folderPath)
     filePath := folderPath "\AccSettings" A_Index ".txt"
     if !FileExist(filePath) {
-		FileAppend("", filePath)
+		FileAppend(AutoAppendAcc, filePath)
 		MsgBox("Missing file created at `n" filePath ".", "Info", "T1")
     }
 }
 
 Loop lengthVal {			;Creates missing default files if they do not exist.
-    filePath := A_ScriptDir "\defaultSettings" A_Index ".txt"
+    filePath := A_ScriptDir "\SavedData\defaultSettings" A_Index ".txt"
     if !FileExist(filePath) {
-		FileAppend("`n`n`n`n`n`n`n", filePath)
+		FileAppend(AutoAppendDef, filePath)
 		MsgBox("Missing file created at `n" filePath ".", "Info", "T1")
     }
 }
@@ -71,7 +111,7 @@ defaultArr := []
 settingsArr := []
 
 Loop lengthVal {
-	defaultArr.Push(A_ScriptDir "\defaultSettings" A_Index ".txt") ;Creates array of default file names
+	defaultArr.Push(A_ScriptDir "\SavedData\defaultSettings" A_Index ".txt") ;Creates array of default file names
 	settingsArr.Push(folderPath "\AccSettings" A_Index ".txt") ;Creates array of settings file names
 }
 
@@ -96,10 +136,7 @@ mygui := GUI(,"BSS Alt Item User") ; Create GUI window
 ;Creates Tabs
 tab := mygui.AddTab3("x0 y0 w299 h260", tabNames)
 
-;Variables for UI layout
-StartY := 50
-Spacing := 30
-num := 7
+
 
 TabUI(TabIndex, suffix) {			;Function to create the tab UI
     global mygui, tab, StartY, Spacing, num 
@@ -109,7 +146,12 @@ TabUI(TabIndex, suffix) {			;Function to create the tab UI
     ; Read default.txt into an array
     defaultValue := []
     	loop read defaultArr[TabIndex] {
-       		line := Trim(A_LoopReadLine)
+			defaultValueString := strsplit(A_LoopReadLine, ".")
+			if (defaultValueString.Length < 2) {
+				MsgBox("Line does not contain expected format: " A_LoopReadLine, "Warning")
+				continue
+			}			;MsgBox(strsplit(A_LoopReadLine, ".").get(1) ", " strsplit(A_LoopReadLine, ".").get(2))
+			line := defaultValueString.get(2)
        		if (line = "")
            		 defaultValue.Push("")   ;only numerates if not empty to not give errors and to allow blank defaults
       		else
@@ -121,14 +163,38 @@ TabUI(TabIndex, suffix) {			;Function to create the tab UI
         k := StartY + (A_Index - 1) * Spacing
         mygui.AddText("x5 y" k, A_Index)
         vName := ("Keybindvalue" A_Index "_" suffix)
-        mygui.AddEdit("Number x30 y" (k - 4) " w260 v" vName, defaultValue[A_Index]) ;"defaultValue[A_Index]" sets default value from file
+        mygui.AddEdit("Number x30 y" (k - 4) " w230 v" vName, defaultValue[A_Index]) ;"defaultValue[A_Index]" sets default value from file
     }
 }
 
-Loop tabNames.Length {			;Create each tab's UI, the amount changes with how many tab names are in the array
+Loop lengthVal {			;Create each tab's UI, the amount changes with how many tab names are in the array
 		TabUI(A_Index, tabNames.Get(A_Index))
+		}
+;Duped Key Default Autofill
+defaultDupe := []
+	;msgbox(defaultarr[1])
+	loop read defaultArr[1] {
+		DupeSplitString := []
+		DupeSplitString := strsplit(A_LoopReadLine, ".")
+		line := DupeSplitString.get(1)
+		if (line = "0")
+			defaultDupe.Push("")   ;only numerates if not empty to not give errors and to allow blank defaults
+		else
+			defaultDupe.Push(Number(line))
 }
+
+StartY2 := 35
+tab.UseTab("Main")
+	mygui.addtext("x263 y25", "Dupe?")
+	Loop num {
+		k := StartY + (A_Index - 1) * Spacing
+		vRepeat := ("RepeatValue" A_Index)
+		mygui.addedit("w15 x275 y" (k - 4) " v" vRepeat, defaultDupe[A_Index])
+	}
+
 	tab.UseTab()  ; Stop assigning controls to tabs
+	TabButton := mygui.addbutton("x270 y0 w20 h20 vAddTab", "+")
+	TabButton.OnEvent("Click", MainAddTab)
 
 ;Submit Button
 btnSubmit := mygui.Add("Button", "x5 y265 w93 h30", "Submit")
@@ -148,7 +214,7 @@ if counter = "1" {
 }
 
 if counter = "0" {
-	listenerselectgui.addtext("x10 y10 w280", "When the window is closed, the file listener will be automatically copied to all desktops.`n`nOnce closed, please open your other desktops and run the MacroCommListener.ahk file.")
+	listenerselectgui.addtext("x10 y10 w280", "When the window is closed, the file listener will be automatically copied to all desktops.`n`nOnce closed, please open your other desktops and run the MacroCommListener.fileformat file.")
 	listenerselectgui.show("w300 h150")
 }
 										;FUNCTIONS
@@ -178,17 +244,26 @@ UpdateDefaults() {
 						;BUTTON FUNCTIONS
 ;Saves inputted values to their respective files when Submit is pressed
 SubmitClicked(*) {
-	global mygui, keydelayarray, num
+	global mygui, keydelayarray, num, tabNames
 	loop lengthVal {
 		suffix := tabNames.Get(A_Index)
+		;msgbox(suffix)
 		guidata := mygui.Submit()
 		keydelayarray := []
-		Loop num {
+		Loop num { 
+			if suffix = tabNames.get(1) {
+				vRepeat := "RepeatValue" A_Index
+				RepeatVal := Trim(guidata.%vRepeat%)
+				if RepeatVal == ""
+					RepeatVal := "0"
+				} else {
+					RepeatVal := "0"
+				}
 			varName := "Keybindvalue" A_Index "_" suffix
 			value := Trim(guidata.%varName%)
 			if value == ""
 				value := "0"
-			keydelayarray.Push(value)
+			keydelayarray.Push(RepeatVal "." value)
 		}																					;Debug
 		;MsgBox(keydelayarray.Get(1) ", " keydelayarray.Get(2) ", " keydelayarray.Get(3) ", " keydelayarray.Get(4) ", " keydelayarray.Get(5) ", " keydelayarray.Get(6) ", " keydelayarray.Get(7) ".","Debug")
 		UpdateFiles()
@@ -201,7 +276,7 @@ StopClicked(*) {
 	loop lengthVal {
 		suffix := tabNames.Get(A_Index)
 		keydelayarray := []
-		value := "0"
+		value := "0.0"
 		Loop num {
 			keydelayarray.Push(value)
 		}
@@ -217,20 +292,27 @@ SetDefaultClicked(*) {
 		guidata := mygui.Submit()
 		keydelayarray := []
 		Loop num {
+			if suffix = tabNames.get(1) {
+				vRepeat := "RepeatValue" A_Index
+				RepeatVal := Trim(guidata.%vRepeat%)
+				if RepeatVal == ""
+					RepeatVal := "0"
+				} else {
+					RepeatVal := "0"
+				}
 			varName := "Keybindvalue" A_Index "_" suffix
 			value := Trim(guidata.%varName%)
-			keydelayarray.Push(value)
+			keydelayarray.Push(RepeatVal "." value)
 		}																					;Debug
 		;MsgBox(keydelayarray.Get(1) ", " keydelayarray.Get(2) ", " keydelayarray.Get(3) ", " keydelayarray.Get(4) ", " keydelayarray.Get(5) ", " keydelayarray.Get(6) ", " keydelayarray.Get(7) ".","Debug")
 		UpdateDefaults()
 	}
 }
 ListenerSelectGui_Close(gui) {
-    global usersList, folderPath, ListenerFilePath, mygui
+    global usersList, folderPath, mygui, fileformat
 
-    sourcePath := A_ScriptDir "\MacroCommListener.ahk"
-    destPath := EnvGet("PUBLIC") "\Desktop\MacroCommListener.ahk"
-
+    sourcePath := A_ScriptDir "\MacroCommListener." fileformat
+    destPath := EnvGet("PUBLIC") "\Desktop\MacroCommListener." fileformat
     success := false
 
     try {
@@ -248,10 +330,19 @@ ListenerSelectGui_Close(gui) {
         public := EnvGet("PUBLIC")
 		FileCopy(sourcePath, public, true)
         Run("explorer.exe " public)
-        MsgBox("Please manually copy MacroCommListener.ahk into the folder called 'Public Desktop'.`nThis can be closed once you are finished.", "Error: Manual Action Required")
-		MsgBox("After copying, please open your other desktops and run the MacroCommListener.ahk file.", "Info", "T5")
+        MsgBox("Please manually copy MacroCommListener.exe into the folder called 'Public Desktop'.`nThis can be closed once you are finished.", "Error: Manual Action Required")
+		MsgBox("After copying, please open your other desktops and run the MacroCommListener.exe file.", "Info", "T5")
     }
 
     ; Continue with the main GUI
     mygui.Show("w299 h300")
+}
+MainAddTab(*) {
+    global mygui, tab, tabNames, lengthVal, tabSettingsMap, tabDefaultMap, defaultArr, settingsArr
+    
+    ; Add new tab name
+    newTabName := ", Alt_" (lengthVal)
+	FileAppend(newTabName, iniFilePath)
+
+	Reload()
 }
